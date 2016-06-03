@@ -16,7 +16,7 @@ This -> **IMGP3098.mov** becomes this -> **20160602-1430.mov**
 | -s | Use system file modification date|
 | -w | Warn when files metadata dates is inconsistent with it's modification date (will show x by the name), so you can|
 | --skip, -i | Will skip files with dates inconsistencies as indicated in previous point|
-| -e EXTENSION | Rename files with extensions different from MOV. It's regexp, so you can specify several options. Usually I use `-e 'MOV|MTS' -s` to rename videos from my camera, which obviously don't contain QT metadata|
+| -e EXTENSION | Rename files with extensions different from MOV. It's regexp, so you can specify several options. Usually I use `-e "MOV|MTS" -s` to rename videos from my camera, which obviously don't contain QT metadata|
 
 By default script uses QuickTime moov header movie modification time, because usually it contains the right thing, but in some cases it's not right (that's why I had to write this script).
 
