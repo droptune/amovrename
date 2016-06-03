@@ -306,7 +306,7 @@ def main(argv):
     if answer.startswith('y'):
         for filename, after in zip(filelist, newnames):
             path = os.path.dirname(filename)
-            os.rename(filename, os.path.join(path, after)
+            os.rename(filename, os.path.join(path, after))
         print('Done.')
     else:
         print('Nothing to do.')
