@@ -159,37 +159,35 @@ def get_moov_time(filename):
     # moov ctime/mtime, trak ctime/mtime, mdia ctime/mtime
     times = {'moov': [0, 0], 'trak': [0, 0], 'mdia': [0, 0]}
     
-    movie = open(filename, 'r+b')
-    
-    # atoms to search for
-    atoms = mov_atoms
-    # Read atoms in file until we find moov or reach the end
-    # Then search for inner moov atoms
-    while True:
-        try:
-            atom_size, atom_type = struct.unpack('>L4s', movie.read(8))
-        except:
-            break
-        
-        if atom_type in atoms:
-            header = movie.read(8)[4:8]
-            # Check for correct header and read times
-            if header == atoms[atom_type]['header']:
-                times[atom_type.decode()] = read_times(movie)
-            
-            # seek to the end of atom
-            movie.seek(atoms[atom_type]['size'], 1)
-        
-        # If found moov continue to inner moov atoms
-        if atom_type == b'moov':
-            atoms = moov_atoms
-        
-        else:
-            if atom_size < 8:
+    with open(filename, 'r+b') as movie:
+        # atoms to search for
+        atoms = mov_atoms
+        # Read atoms in file until we find moov or reach the end
+        # Then search for inner moov atoms
+        while True:
+            try:
+                atom_size, atom_type = struct.unpack('>L4s', movie.read(8))
+            except:
                 break
-            movie.seek(atom_size - 8, os.SEEK_CUR)
 
-    movie.close()
+            if atom_type in atoms:
+                header = movie.read(8)[4:8]
+                # Check for correct header and read times
+                if header == atoms[atom_type]['header']:
+                    times[atom_type.decode()] = read_times(movie)
+
+                # seek to the end of atom
+                movie.seek(atoms[atom_type]['size'], 1)
+
+            # If found moov continue to inner moov atoms
+            if atom_type == b'moov':
+                atoms = moov_atoms
+
+            else:
+                if atom_size < 8:
+                    break
+                movie.seek(atom_size - 8, os.SEEK_CUR)
+
     return times
             
 
