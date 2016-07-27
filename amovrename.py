@@ -32,7 +32,7 @@ def print_help():
     
 def get_file_names(path, extension):
     """
-    Gets filelist to process
+    Get filelist to process
     """
     worklist = []   # empty worklist of files
     filelist = []    # list for old names
@@ -65,81 +65,82 @@ def get_file_names(path, extension):
     return filelist
 
 
-def get_new_filenames(files_times, use_time, extension):
+def get_new_filenames(files_and_timestamps, use_time, extension):
     """
-    Creates list of new filenames appending index when new name
+    Create list of new filenames appending index when new name
     already exists
     """
-    newnames = []
-    extension_check = re.compile('(\.' + extension + ')$', re.I)
+    new_names = []
+    file_extension_check = re.compile('(\.' + extension + ')$', re.I)
     
-    for filename, filetime in files_times:
-        extension = extension_check.search(filename).group(1)
+    for old_filename, file_timestamp in files_and_timestamps:
+        current_file_extension = file_extension_check.search(old_filename).group(1)
+        current_file_extension_length = len(current_file_extension)
         # Create new name
-        t = filetime[use_time][1]
+        this_file_timestamp = file_timestamp[use_time][1]
                 
-        if t == 0:
+        if this_file_timestamp == 0:
             # No creation time for this file found
             # Will try to use old name. Adding index if it overlaps
             # with new filenames
-            newname = filename
+            new_filename = old_filename
         else:
-            newname = t + extension
+            new_filename = this_file_timestamp + current_file_extension
                        
-        idx = 0
-        newname_no_index = newname[:-4]
-            
-        # If new filename exists in newnames list append index to it
-        while newname in newnames:
-            idx += 1
-            newname = newname_no_index + '-' + str(idx) + extension
-        newnames.append(newname)
+        file_index = 0
+        new_name_without_index = new_filename[:-current_file_extension_length]
+
+        # If new filename already exists in new_names list append index to it
+        while new_filename in new_names:
+            file_index += 1
+            new_filename = new_name_without_index + '-' + str(file_index) + current_file_extension
+        new_names.append(new_filename)
     
-    return newnames
+    return new_names
 
 
-def get_file_times(files, time_format):
+def get_file_timestamps(files, timestamp_format):
     """
-    Gets list of system and QT times from files
+    Get list of system and QT timestamps from files
     """
-    times = []      # list of different times for files
-    
+    timestamps = []      # list of different timestamps for files
+
     for filename in files:
-        filetime = {'file': [0, 0]}  # Will contain all time values we will find
+        file_timestamps = {'file': [0, 0]}  # Will contain all time values we will find
     
         # Get file mtime
-        filetime['file'][1] = os.path.getmtime(filename)
+        file_timestamps['file'][1] = os.path.getmtime(filename)
         
-        # Get moov times
-        filetime.update(get_moov_time(filename))        
+        # Get moov timestamps
+        file_timestamps.update(get_moov_time(filename))
         
-        # Format all times according to provided template
+        # Format all timestamps according to provided template
         try:
-            format_time(filetime, time_format)
+            format_time(file_timestamps, timestamp_format)
         except ValueError:
-            print('Error in time format "{0}."'.format(time_format))
+            print('Error in time format "{0}."'.format(timestamp_format))
             sys.exit(1)
         
-        times.append(filetime)
+        timestamps.append(file_timestamps)
     
-    return times
+    return timestamps
 
 
-def format_time(times, time_format):
+def format_time(timestamps, time_format):
     """
-    Formats times according to provided template
+    Format timestamps according to provided template
     """
-    for item in times:
-        for time_item in range(len(times[item])):
-            times[item][time_item] = time.strftime(
+    for timestamp_type in timestamps:
+        for time_item in range(len(timestamps[timestamp_type])):
+            timestamps[timestamp_type][time_item] = time.strftime(
                 time_format,
-                time.localtime(times[item][time_item])
+                time.localtime(timestamps[timestamp_type][time_item])
             )
 
 
 def read_times(filename):
     """
-    Reads creation and modification time given the beginning of atom
+    Read creation and modification time given the beginning of atom
     """
     QT_EPOCH = 2082844800
     filename.seek(4, 1)
@@ -150,14 +151,14 @@ def read_times(filename):
 
 def get_moov_time(filename):
     """
-    Gets movie creation time from moov atom. Returns 0 in case of error.
+    Get movie creation time from moov atom. Returns 0 in case of error.
     """
     # atom: header, length after dates
     mov_atoms = {b'moov': {'header': b'mvhd', 'size': 88}}
     moov_atoms = {b'trak': {'header': b'tkhd', 'size': 72},
                   b'mdia': {'header': b'mdhd', 'size': 12}}
     # moov ctime/mtime, trak ctime/mtime, mdia ctime/mtime
-    times = {'moov': [0, 0], 'trak': [0, 0], 'mdia': [0, 0]}
+    timestamps = {'moov': [0, 0], 'trak': [0, 0], 'mdia': [0, 0]}
     
     with open(filename, 'r+b') as movie:
         # atoms to search for
@@ -172,9 +173,9 @@ def get_moov_time(filename):
 
             if atom_type in atoms:
                 header = movie.read(8)[4:8]
-                # Check for correct header and read times
+                # Check for correct header and read timestamps
                 if header == atoms[atom_type]['header']:
-                    times[atom_type.decode()] = read_times(movie)
+                    timestamps[atom_type.decode()] = read_times(movie)
 
                 # seek to the end of atom
                 movie.seek(atoms[atom_type]['size'], 1)
@@ -188,7 +189,7 @@ def get_moov_time(filename):
                     break
                 movie.seek(atom_size - 8, os.SEEK_CUR)
 
-    return times
+    return timestamps
             
 
 def main(argv):
@@ -243,8 +244,8 @@ def main(argv):
         print('No %s files found.' % extension)
         sys.exit(1)
     
-    filetimes = get_file_times(filelist, name_format)
-    files_times = list(zip(filelist, filetimes))
+    file_timestamps = get_file_timestamps(filelist, name_format)
+    files_and_timestamps = list(zip(filelist, file_timestamps))
 
     path = ''
     # Use specified mode
@@ -252,7 +253,7 @@ def main(argv):
         print('Filename'.ljust(20) + '1.File mtime'.ljust(18) + '='.ljust(3) + '2.moov mtime'.ljust(20) + 
               '3.moov ctime'.ljust(20) + '4.trak mtime'.ljust(20) + '5.trak ctime'.ljust(20))
         print('-'*120)
-        for filename, times in sorted(files_times):    
+        for filename, times in sorted(files_and_timestamps):
             if os.path.dirname(filename) != path:
                 path = os.path.dirname(filename)
                 print('\n' + path)
@@ -261,7 +262,7 @@ def main(argv):
                 eq = '-'
                 if args.skip:
                     filelist.remove(filename)
-                    filetimes.remove(times)
+                    file_timestamps.remove(times)
                     continue
             else:
                 eq = 'x'
@@ -276,9 +277,9 @@ def main(argv):
         print('Which time to use? (1-5)')
         selection = input()
 
-    newnames = get_new_filenames(files_times, use_time, extension)
+    newnames = get_new_filenames(files_and_timestamps, use_time, extension)
     
-    before_after = list(zip(filelist, newnames, filetimes))
+    before_after = list(zip(filelist, newnames, file_timestamps))
     
     print('\nFiles to be renamed:')
     path = ''
