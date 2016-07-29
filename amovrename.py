@@ -197,7 +197,7 @@ def find_atom(movie_file, atom):
     return False
 
 
-def seek_to_atoms_end(movie_file, atom):
+def seek_to_atom_header_end(movie_file, atom):
     """
     Seek to the end of 'atom' in 'movie_file'.
     """
@@ -217,13 +217,13 @@ def get_moov_time(filename):
             return timestamps
 
         timestamps[moov_atom.name] = read_timestamps(movie_file)
-        seek_to_atoms_end(movie_file, moov_atom)
+        seek_to_atom_header_end(movie_file, moov_atom)
 
         trak_atom = Atom(b'trak', b'tkhd', 72)
         if not find_atom(movie_file, trak_atom):
             return timestamps
         timestamps[trak_atom.name] = read_timestamps(movie_file)
-        seek_to_atoms_end(movie_file, trak_atom)
+        seek_to_atom_header_end(movie_file, trak_atom)
 
         mdia_atom = Atom(b'mdia', b'mdhd', 12)
         if not find_atom(movie_file, mdia_atom):
