@@ -29,8 +29,17 @@ def print_help():
         "with additional index appended if file with the same name exists in folder.\n"
         )
     
-    
-def get_file_names(path, extension):
+
+class Atom():
+    """
+    MOV file atom
+    """
+    def __init__(self, name, header, size):
+        self.name = name
+        self.header = header
+        self.size = size
+
+def get_filenames(path, extension):
     """
     Get filelist to process
     """
@@ -138,7 +147,7 @@ def format_time(timestamps, time_format):
             )
 
 
-def read_times(filename):
+def read_timestamps(filename):
     """
     Read creation and modification time given the beginning of atom
     """
@@ -149,45 +158,75 @@ def read_times(filename):
     return [ctime, mtime]
 
 
+def atom_header_correct(movie_file, atom):
+    """
+    Check if atom header is correct.
+    :param movie_file:
+    :param atom:
+    :return:
+    """
+    if movie_file.read(8)[4:8] == atom.header:
+        return True
+    else:
+        return False
+
+
+def find_atom(movie_file, atom):
+    """
+    Search for desired atom.
+    :param movie_file:
+    returns False if not found
+    """
+
+    while True:
+        try:
+            atom_size, atom_type = struct.unpack('>L4s', movie_file.read(8))
+        except:
+            break
+
+        if atom_type == atom.name and atom_header_correct(movie_file, atom):
+            return True
+
+        else:
+            if atom_size < 8:
+                break
+            movie_file.seek(atom_size - 8, os.SEEK_CUR)
+
+    return False
+
+
+def seek_to_atoms_end(movie_file, atom):
+    """
+    Seek to the end of 'atom' in 'movie_file'.
+    """
+    movie_file.seek(atom.size, 1)
+
+
 def get_moov_time(filename):
     """
-    Get movie creation time from moov atom. Returns 0 in case of error.
+    Get movie creation time from QT movie atom. Returns zero timestamps in case of error.
+    Looks in 'moov', 'trak' and 'mdia' first found headers
     """
-    # atom: header, length after dates
-    mov_atoms = {b'moov': {'header': b'mvhd', 'size': 88}}
-    moov_atoms = {b'trak': {'header': b'tkhd', 'size': 72},
-                  b'mdia': {'header': b'mdhd', 'size': 12}}
-    # moov ctime/mtime, trak ctime/mtime, mdia ctime/mtime
     timestamps = {'moov': [0, 0], 'trak': [0, 0], 'mdia': [0, 0]}
-    
-    with open(filename, 'r+b') as movie:
-        # atoms to search for
-        atoms = mov_atoms
-        # Read atoms in file until we find moov or reach the end
-        # Then search for inner moov atoms
-        while True:
-            try:
-                atom_size, atom_type = struct.unpack('>L4s', movie.read(8))
-            except:
-                break
 
-            if atom_type in atoms:
-                header = movie.read(8)[4:8]
-                # Check for correct header and read timestamps
-                if header == atoms[atom_type]['header']:
-                    timestamps[atom_type.decode()] = read_times(movie)
+    with open(filename, 'r+b') as movie_file:
+        moov_atom = Atom(b'moov', b'mvhd', 88)
+        if not find_atom(movie_file, moov_atom):
+            return timestamps
 
-                # seek to the end of atom
-                movie.seek(atoms[atom_type]['size'], 1)
+        timestamps[moov_atom.name.decode()] = read_timestamps(movie_file)
+        seek_to_atoms_end(movie_file, moov_atom)
 
-            # If found moov continue to inner moov atoms
-            if atom_type == b'moov':
-                atoms = moov_atoms
+        trak_atom = Atom(b'trak', b'tkhd', 72)
+        if not find_atom(movie_file, trak_atom):
+            return timestamps
+        timestamps[trak_atom.name.decode()] = read_timestamps(movie_file)
+        seek_to_atoms_end(movie_file, trak_atom)
 
-            else:
-                if atom_size < 8:
-                    break
-                movie.seek(atom_size - 8, os.SEEK_CUR)
+        mdia_atom = Atom(b'mdia', b'mdhd', 12)
+        if not find_atom(movie_file, mdia_atom):
+            return timestamps
+        timestamps[mdia_atom.name.decode()] = read_timestamps(movie_file)
 
     return timestamps
             
@@ -237,7 +276,7 @@ def main(argv):
         print_help()
         sys.exit(0)
     
-    filelist = get_file_names(args.filename, extension)
+    filelist = get_filenames(args.filename, extension)
     
     print('')
     if not filelist:
