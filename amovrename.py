@@ -32,10 +32,12 @@ def print_help():
 
 class Atom():
     """
-    MOV file atom
+    MOV file atom.
+    'type' and 'header' are bytes
     """
-    def __init__(self, name, header, size):
-        self.name = name
+    def __init__(self, type, header, size):
+        self.type = type
+        self.name = self.type.decode()
         self.header = header
         self.size = size
 
@@ -184,7 +186,7 @@ def find_atom(movie_file, atom):
         except:
             break
 
-        if atom_type == atom.name and atom_header_correct(movie_file, atom):
+        if atom_type == atom.type and atom_header_correct(movie_file, atom):
             return True
 
         else:
@@ -214,19 +216,19 @@ def get_moov_time(filename):
         if not find_atom(movie_file, moov_atom):
             return timestamps
 
-        timestamps[moov_atom.name.decode()] = read_timestamps(movie_file)
+        timestamps[moov_atom.name] = read_timestamps(movie_file)
         seek_to_atoms_end(movie_file, moov_atom)
 
         trak_atom = Atom(b'trak', b'tkhd', 72)
         if not find_atom(movie_file, trak_atom):
             return timestamps
-        timestamps[trak_atom.name.decode()] = read_timestamps(movie_file)
+        timestamps[trak_atom.name] = read_timestamps(movie_file)
         seek_to_atoms_end(movie_file, trak_atom)
 
         mdia_atom = Atom(b'mdia', b'mdhd', 12)
         if not find_atom(movie_file, mdia_atom):
             return timestamps
-        timestamps[mdia_atom.name.decode()] = read_timestamps(movie_file)
+        timestamps[mdia_atom.name] = read_timestamps(movie_file)
 
     return timestamps
             
