@@ -155,9 +155,9 @@ def read_timestamps(filename):
     """
     QT_EPOCH = 2082844800
     filename.seek(4, 1)
-    ctime = struct.unpack('>I', filename.read(4))[0] - QT_EPOCH
-    mtime = struct.unpack('>I', filename.read(4))[0] - QT_EPOCH
-    return [ctime, mtime]
+    creation_time = struct.unpack('>I', filename.read(4))[0] - QT_EPOCH
+    modification_time = struct.unpack('>I', filename.read(4))[0] - QT_EPOCH
+    return [creation_time, modification_time]
 
 
 def atom_header_correct(movie_file, atom):
@@ -318,9 +318,9 @@ def main(argv):
         print('Which time to use? (1-5)')
         selection = input()
 
-    newnames = get_new_filenames(files_and_timestamps, use_time, extension)
+    new_names = get_new_filenames(files_and_timestamps, use_time, extension)
     
-    before_after = list(zip(filelist, newnames, file_timestamps))
+    before_after = list(zip(filelist, new_names, file_timestamps))
     
     print('\nFiles to be renamed:')
     path = ''
@@ -335,7 +335,7 @@ def main(argv):
             else:
                 warn = 'x '
                 if args.skip:
-                    newnames.remove(after)
+                    new_names.remove(after)
                     filelist.remove(before)
                     continue
         print(os.path.basename(before).ljust(20) + ' -> ' + warn + after)
@@ -344,7 +344,7 @@ def main(argv):
     answer = input()
     
     if answer.startswith('y'):
-        for filename, after in zip(filelist, newnames):
+        for filename, after in zip(filelist, new_names):
             path = os.path.dirname(filename)
             os.rename(filename, os.path.join(path, after))
         print('Done.')
