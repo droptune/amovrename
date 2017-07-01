@@ -84,8 +84,10 @@ def get_new_filenames(files_and_timestamps, use_time, extension):
     new_names = []
     file_extension_check = re.compile('(\.' + extension + ')$', re.I)
     
+    old_filenames = [os.path.basename(filename[0]).lower() for filename in files_and_timestamps]
+    
     for old_filename, file_timestamp in files_and_timestamps:
-        current_file_extension = file_extension_check.search(old_filename).group(1)
+        current_file_extension = file_extension_check.search(old_filename).group(1).lower()
         current_file_extension_length = len(current_file_extension)
         # Create new name
         this_file_timestamp = file_timestamp[use_time][1]
@@ -94,15 +96,16 @@ def get_new_filenames(files_and_timestamps, use_time, extension):
             # No creation time for this file found
             # Will try to use old name. Adding index if it overlaps
             # with new filenames
-            new_filename = old_filename
+            new_filename = old_filename.lower()
         else:
             new_filename = this_file_timestamp + current_file_extension
-                       
+            new_filename = new_filename.lower()
+        
         file_index = 0
         new_name_without_index = new_filename[:-current_file_extension_length]
 
-        # If new filename already exists in new_names list append index to it
-        while new_filename in new_names:
+        # If new filename already exists in new_names list or in old_filenames append index to it
+        while new_filename in new_names or new_filename in old_filenames:
             file_index += 1
             new_filename = new_name_without_index + '-' + str(file_index) + current_file_extension
         new_names.append(new_filename)
